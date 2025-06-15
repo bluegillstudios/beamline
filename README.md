@@ -1,8 +1,8 @@
-# 🌟 Beamline
+# Beamline
 
 **Beamline** is a fast, modular, command-line raytracer designed for both CPU-based path tracing and hybrid GPU acceleration. Built for researchers, graphics enthusiasts, and hackers who want full control — from the shell.
 
-![Render Example](docs/cornell.png) <!-- optional image preview -->
+![Render Example](docs/cornell.png) 
 
 ---
 
