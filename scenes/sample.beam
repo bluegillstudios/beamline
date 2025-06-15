@@ -1,0 +1,31 @@
+# Sample Beamline scene file
+
+[Camera]
+position = 0 1 5
+lookat = 0 0 0
+
+[Light1]
+type = point
+position = 5 5 -3
+color = 1 1 1
+
+[Sphere1]
+type = sphere
+center = 0 0 -5
+radius = 1.0
+diffuse = 1 0 0
+reflectivity = 0.3
+
+[Sphere2]
+type = sphere
+center = 2 0 -6
+radius = 1.0
+diffuse = 0 0 1
+reflectivity = 0.7
+
+[Plane1]
+type = plane
+point = 0 -1 0
+normal = 0 1 0
+diffuse = 0.8 0.8 0
+reflectivity = 0.0
