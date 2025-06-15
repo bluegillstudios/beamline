@@ -4,9 +4,9 @@
 #include <iomanip>
 #include <ctime>
 #include <filesystem>
-#include "../loader/SceneLoader.h"
-#include "../cpu/RayTracer.h"
-#include "../image/ImageSaver.h"
+#include "loader/SceneLoader.h"
+#include "cpu/RayTracer.h"
+#include "image/ImageSaver.h"
 
 const std::string BEAMLINE_VERSION = "1.0.1940";
 
