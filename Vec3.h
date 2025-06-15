@@ -13,7 +13,9 @@ struct Vec3 {
     Vec3 operator*(float s) const       { return Vec3(x * s, y * s, z * s); }
     Vec3 operator/(float s) const       { return Vec3(x / s, y / s, z / s); }
     Vec3 operator*(const Vec3& v) const { return Vec3(x * v.x, y * v.y, z * v.z); }
-
+    bool operator==(const Vec3& other) const {
+        return x == other.x && y == other.y && z == other.z;
+    }
     Vec3& operator+=(const Vec3& v) { x += v.x; y += v.y; z += v.z; return *this; }
     Vec3& operator*=(float s)       { x *= s; y *= s; z *= s; return *this; }
 
