@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <cctype>
+#include <algorithm>
 
 static void save_ppm(const std::string& filename, const std::vector<Vec3>& framebuffer, int width, int height) {
     std::ofstream ofs(filename);
