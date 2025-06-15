@@ -1,0 +1,29 @@
+[Camera]
+position = 0 2 5
+lookat = 0 1 0
+
+[Light1]
+type = point
+position = 0 5 0
+color = 1 1 1
+
+[Sphere1]
+type = sphere
+center = -1 1 0
+radius = 0.5
+diffuse = 1 0 0
+reflectivity = 0.5
+
+[Sphere2]
+type = sphere
+center = 0 1 0
+radius = 0.5
+diffuse = 0 1 0
+reflectivity = 0.4
+
+[Sphere3]
+type = sphere
+center = 1 1 0
+radius = 0.5
+diffuse = 0 0 1
+reflectivity = 0.3
