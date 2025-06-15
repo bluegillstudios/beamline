@@ -1,6 +1,6 @@
 # Beamline
 
-Beamline is an open-source, CLI-based path tracer that supports CPU-based rendering and GPU-accelerated hybrid rendering. It is designed to be modular, extensible, and easy to use with a flexible `.beam` scene format.
+Beamline is an open-source, CLI-based path tracer that supports CPU-based rendering. It is designed to be modular, extensible, and easy to use with a flexible `.beam` scene format.
 
 ![Render Example](docs/balls.png) 
 
