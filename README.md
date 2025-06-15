@@ -46,7 +46,8 @@ beamline scenes/cornell.beam --info
 
 Beamline uses an INI-style format for scene description. Scenes are composed of named sections representing objects or components.
 
-## Supported Sections and Fields
+Supported Sections and Fields are here:
+
 ```[Camera]
 
 position = x y z
@@ -84,3 +85,38 @@ normal = x y z
 diffuse = r g b
 
 reflectivity = float (0.0 to 1.0)```
+
+```
+
+## Example
+```
+[Camera]
+position = 0 1 5
+lookat = 0 0 0
+
+[Light1]
+type = point
+position = 5 5 -3
+color = 1 1 1
+
+[Sphere1]
+type = sphere
+center = 0 0 -5
+radius = 1.0
+diffuse = 1 0 0
+reflectivity = 0.3
+
+[Sphere2]
+type = sphere
+center = 2 0 -6
+radius = 1.0
+diffuse = 0 0 1
+reflectivity = 0.7
+
+[Plane1]
+type = plane
+point = 0 -1 0
+normal = 0 1 0
+diffuse = 0.8 0.8 0
+reflectivity = 0.0
+```
