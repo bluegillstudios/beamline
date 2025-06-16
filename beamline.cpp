@@ -5,12 +5,43 @@
 #include <ctime>
 #include <filesystem>
 #include <sstream>
-#include <thread>
+#include <vector>
+#include <cstdio>
+
 #include "loader/SceneLoader.h"
 #include "cpu/RayTracer.h"
 #include "image/ImageSaver.h"
 
 const std::string BEAMLINE_VERSION = "1.0.1940";
+
+struct CameraKeyframe {
+    float time;
+    Vec3 position;
+    Vec3 lookat;
+};
+
+Vec3 lerp(const Vec3& a, const Vec3& b, float t) {
+    return a * (1 - t) + b * t;
+}
+
+CameraKeyframe interpolateCamera(const std::vector<CameraKeyframe>& keys, float t) {
+    if (keys.empty()) throw std::runtime_error("No keyframes defined.");
+
+    if (t <= keys.front().time) return keys.front();
+    if (t >= keys.back().time) return keys.back();
+
+    for (size_t i = 0; i < keys.size() - 1; ++i) {
+        if (t >= keys[i].time && t <= keys[i + 1].time) {
+            float local_t = (t - keys[i].time) / (keys[i + 1].time - keys[i].time);
+            return CameraKeyframe{
+                t,
+                lerp(keys[i].position, keys[i + 1].position, local_t),
+                lerp(keys[i].lookat, keys[i + 1].lookat, local_t)
+            };
+        }
+    }
+    return keys.back();
+}
 
 void print_banner() {
     std::cout << "\n";
@@ -23,11 +54,11 @@ void print_banner() {
 
 void print_usage() {
     std::cout << "Usage:\n";
-    std::cout << "  beamline <scene.beam> [width height] [--out <file.ppm/png>] [--info]\n";
+    std::cout << "  beamline <scene.beam> [width height] [--out <file.png>] [--info] [--animate <duration_secs> <fps>]\n";
     std::cout << "\nExample:\n";
-    std::cout << "  beamline scenes/test.beam 800 600\n";
-    std::cout << "  beamline scenes/test.beam --out renders/image.png\n";
-    std::cout << "  beamline scenes/test.beam --info\n\n";
+    std::cout << "  beamline scenes/test.beam 800 600 --out output.png\n";
+    std::cout << "  beamline scenes/test.beam --info\n";
+    std::cout << "  beamline scenes/test.beam 800 600 --out frame_%04d.png --animate 2 30\n\n";
 }
 
 std::string get_timestamped_filename(const std::string& base) {
@@ -35,7 +66,7 @@ std::string get_timestamped_filename(const std::string& base) {
     std::tm* tm_info = std::localtime(&now);
     char buffer[32];
     std::strftime(buffer, 32, "%Y-%m-%d_%H%M", tm_info);
-    return base + "_" + buffer + ".ppm";
+    return base + "_" + buffer + ".png";
 }
 
 void validate_scene(const Scene& scene) {
@@ -61,25 +92,6 @@ void print_scene_summary(const Scene& scene, int width, int height) {
               << scene.camera.lookat.y << ", " << scene.camera.lookat.z << ")\n";
 }
 
-void print_progress_bar(int current, int total) {
-    static auto start = std::chrono::steady_clock::now();
-    float percent = static_cast<float>(current) / total;
-    int bar_width = 40;
-    int pos = static_cast<int>(percent * bar_width);
-    auto now = std::chrono::steady_clock::now();
-    double elapsed = std::chrono::duration<double>(now - start).count();
-    double eta = (percent > 0.0) ? (elapsed / percent - elapsed) : 0.0;
-
-    std::cout << "\r[";
-    for (int i = 0; i < bar_width; ++i)
-        std::cout << (i < pos ? "#" : " ");
-    std::cout << "] ";
-    std::cout << std::fixed << std::setprecision(1)
-              << (percent * 100.0f) << "%  ETA: "
-              << std::setw(5) << std::right << int(eta) << "s   ";
-    std::cout.flush();
-}
-
 int main(int argc, char* argv[]) {
     print_banner();
 
@@ -92,7 +104,11 @@ int main(int argc, char* argv[]) {
     bool info_only = false;
     int width = 800, height = 600;
     std::string output_filename;
+    bool animate = false;
+    float anim_duration = 0.f;
+    int anim_fps = 30;
 
+    // Camera overrides
     bool camera_pos_override = false;
     bool camera_look_override = false;
     Vec3 camera_pos_override_val;
@@ -100,7 +116,6 @@ int main(int argc, char* argv[]) {
 
     for (int i = 2; i < argc; ++i) {
         std::string arg = argv[i];
-
         if (arg == "--info") {
             info_only = true;
         } else if (arg == "--out" && i + 1 < argc) {
@@ -110,12 +125,16 @@ int main(int argc, char* argv[]) {
                 width = std::stoi(arg);
                 height = std::stoi(argv[++i]);
             }
+        } else if (arg == "--animate" && i + 2 < argc) {
+            animate = true;
+            anim_duration = std::stof(argv[++i]);
+            anim_fps = std::stoi(argv[++i]);
         } else if (arg == "--camera-pos" && i + 1 < argc) {
             std::string val = argv[++i];
+            std::replace(val.begin(), val.end(), ',', ' ');
             std::istringstream ss(val);
             float x, y, z;
-            char comma1, comma2;
-            if (ss >> x >> comma1 >> y >> comma2 >> z && comma1 == ',' && comma2 == ',') {
+            if (ss >> x >> y >> z) {
                 camera_pos_override_val = Vec3{x, y, z};
                 camera_pos_override = true;
             } else {
@@ -124,10 +143,10 @@ int main(int argc, char* argv[]) {
             }
         } else if (arg == "--camera-look" && i + 1 < argc) {
             std::string val = argv[++i];
+            std::replace(val.begin(), val.end(), ',', ' ');
             std::istringstream ss(val);
             float x, y, z;
-            char comma1, comma2;
-            if (ss >> x >> comma1 >> y >> comma2 >> z && comma1 == ',' && comma2 == ',') {
+            if (ss >> x >> y >> z) {
                 camera_look_override_val = Vec3{x, y, z};
                 camera_look_override = true;
             } else {
@@ -145,20 +164,20 @@ int main(int argc, char* argv[]) {
     auto load_start = std::chrono::high_resolution_clock::now();
     Scene scene = load_scene_from_file(scene_file);
     auto load_end = std::chrono::high_resolution_clock::now();
+
     double load_time = std::chrono::duration<double>(load_end - load_start).count();
 
-    if (camera_pos_override) {
-        scene.camera.position = camera_pos_override_val;
-    }
-    if (camera_look_override) {
-        scene.camera.lookat = camera_look_override_val;
-    }
+    // Override camera if flags set
+    if (camera_pos_override) scene.camera.position = camera_pos_override_val;
+    if (camera_look_override) scene.camera.lookat = camera_look_override_val;
+
     if (scene.camera.position == scene.camera.lookat) {
         std::cerr << "[WARNING] Camera position and lookat are identical. Adjusting lookat.\n";
         scene.camera.lookat = scene.camera.position + Vec3{0, 0, -1};
     }
 
     std::cout << "Scene loaded: " << scene_file << " (" << load_time << " sec)\n";
+
     validate_scene(scene);
     print_scene_summary(scene, width, height);
 
@@ -167,34 +186,77 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    std::cout << "\nRendering...\n";
-    auto render_start = std::chrono::high_resolution_clock::now();
+    if (!animate) {
+        // Single frame render
+        std::cout << "\nRendering...\n";
+        auto render_start = std::chrono::high_resolution_clock::now();
 
-    RayTracer tracer(width, height, 4);
-    tracer.render(scene);
-    std::cout << "\r[########################################] 100.0%  ETA:   0s   \n";
+        RayTracer tracer(width, height, 4);
+        tracer.render(scene);
 
-    auto render_end = std::chrono::high_resolution_clock::now();
-    double render_time = std::chrono::duration<double>(render_end - render_start).count();
+        auto render_end = std::chrono::high_resolution_clock::now();
+        double render_time = std::chrono::duration<double>(render_end - render_start).count();
 
-    std::string output_file = output_filename.empty()
-        ? get_timestamped_filename("output")
-        : output_filename;
+        std::string output_file = output_filename.empty()
+            ? get_timestamped_filename("output")
+            : output_filename;
 
-    std::cout << "Saving to: " << output_file << "\n";
+        std::cout << "Saving to: " << output_file << "\n";
 
-    auto save_start = std::chrono::high_resolution_clock::now();
-    save_image(output_file, tracer.getFramebuffer(), width, height);
-    auto save_end = std::chrono::high_resolution_clock::now();
+        auto save_start = std::chrono::high_resolution_clock::now();
+        save_image(output_file, tracer.getFramebuffer(), width, height);
+        auto save_end = std::chrono::high_resolution_clock::now();
 
-    double save_time = std::chrono::duration<double>(save_end - save_start).count();
+        double save_time = std::chrono::duration<double>(save_end - save_start).count();
 
-    std::cout << std::fixed << std::setprecision(3);
-    std::cout << "\n--- Timing Summary ---\n";
-    std::cout << "Scene load:   " << load_time   << " sec\n";
-    std::cout << "Render time:  " << render_time << " sec\n";
-    std::cout << "Save image:   " << save_time   << " sec\n";
-    std::cout << "Total:        " << (load_time + render_time + save_time) << " sec\n";
+        std::cout << std::fixed << std::setprecision(3);
+        std::cout << "\n--- Timing Summary ---\n";
+        std::cout << "Scene load:   " << load_time << " sec\n";
+        std::cout << "Render time:  " << render_time << " sec\n";
+        std::cout << "Save image:   " << save_time << " sec\n";
+        std::cout << "Total:        " << (load_time + render_time + save_time) << " sec\n";
+
+    } else {
+        // Animate!
+        std::cout << "\nAnimation mode: duration = " << anim_duration << "s, FPS = " << anim_fps << "\n";
+
+        int total_frames = static_cast<int>(anim_duration * anim_fps);
+        float frame_time_step = anim_duration / total_frames;
+
+        // Define camera keyframes here (example)
+        std::vector<CameraKeyframe> camera_keys = {
+            {0.0f, scene.camera.position, scene.camera.lookat},
+            {anim_duration / 2.f, scene.camera.position + Vec3{5.f, 2.f, 0.f}, scene.camera.lookat},
+            {anim_duration, scene.camera.position + Vec3{10.f, 0.f, 0.f}, scene.camera.lookat},
+        };
+
+        for (int frame = 0; frame < total_frames; ++frame) {
+            float t = frame * frame_time_step;
+
+            CameraKeyframe cam = interpolateCamera(camera_keys, t);
+            scene.camera.position = cam.position;
+            scene.camera.lookat = cam.lookat;
+
+            std::cout << "Rendering frame " << frame << " / " << total_frames << " (t=" << t << ")\n";
+
+            RayTracer tracer(width, height, 4);
+            tracer.render(scene);
+
+            std::string frame_file;
+            if (!output_filename.empty() && output_filename.find("%d") != std::string::npos) {
+                char buf[512];
+                std::snprintf(buf, sizeof(buf), output_filename.c_str(), frame);
+                frame_file = buf;
+            } else if (!output_filename.empty()) {
+                // If output filename specified but no %d, append frame index
+                frame_file = output_filename + "_" + std::to_string(frame) + ".png";
+            } else {
+                frame_file = "frame_" + std::to_string(frame) + ".png";
+            }
+
+            save_image(frame_file, tracer.getFramebuffer(), width, height);
+        }
+    }
 
     std::cout << "\nBeamline complete.\n";
     return 0;
