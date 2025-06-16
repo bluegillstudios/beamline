@@ -7,6 +7,7 @@
 #include <sstream>
 #include <vector>
 #include <cstdio>
+#include <algorithm>
 
 #include "loader/SceneLoader.h"
 #include "cpu/RayTracer.h"
