@@ -51,7 +51,7 @@ Scene load_scene_from_file(const std::string& filename) {
                 scene.ambient_light = parse_vec3(data.at("color"));
             }
         }
-        // New: CameraFrame sections: check if section_name starts with "CameraFrame"
+        // CameraFrame sections: check if section_name starts with "CameraFrame"
         else if (section_name.find("CameraFrame") == 0) {
             CameraFrame frame;
             if (data.count("time")) frame.time = std::stof(data.at("time"));
