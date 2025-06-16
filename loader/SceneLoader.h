@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "Vec3.h"       
+#include "../Vec3.h"       
 
 struct Material {
     Vec3 diffuse_color;
