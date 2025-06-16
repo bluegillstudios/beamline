@@ -78,6 +78,29 @@ Scene load_scene_from_file(const std::string& filename) {
                 l.position = parse_vec3(data.at("position"));
                 l.color = parse_vec3(data.at("color"));
                 scene.lights.push_back(l);
+            } else if (type == "triangle") {
+                Triangle t;
+                t.v0 = parse_vec3(data.at("v0"));
+                t.v1 = parse_vec3(data.at("v1"));
+                t.v2 = parse_vec3(data.at("v2"));
+                t.material.diffuse_color = parse_vec3(data.at("diffuse"));
+                t.material.reflectivity = std::stof(data.at("reflectivity"));
+                if (data.count("emission"))
+                    t.material.emission = parse_vec3(data.at("emission"));
+                if (data.count("ior"))
+                    t.material.ior = std::stof(data.at("ior"));
+                scene.triangles.push_back(t);
+            } else if (type == "cube") {
+                Cube c;
+                c.min = parse_vec3(data.at("min"));
+                c.max = parse_vec3(data.at("max"));
+                c.material.diffuse_color = parse_vec3(data.at("diffuse"));
+                c.material.reflectivity = std::stof(data.at("reflectivity"));
+                if (data.count("emission"))
+                    c.material.emission = parse_vec3(data.at("emission"));
+                if (data.count("ior"))
+                    c.material.ior = std::stof(data.at("ior"));
+                scene.cubes.push_back(c);
             }
         }
     };

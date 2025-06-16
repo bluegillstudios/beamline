@@ -26,4 +26,6 @@ private:
     bool intersect(const Ray& ray, const Scene& scene, Vec3& hitPoint, Vec3& normal, Material& mat);
     bool intersectSphere(const Ray& ray, const Sphere& sphere, float& t, Vec3& hit, Vec3& normal);
     bool intersectPlane(const Ray& ray, const Plane& plane, float& t, Vec3& hit, Vec3& normal);
+    bool intersectCube(const Ray& ray, const Cube& cube, float& t, Vec3& hit, Vec3& normal);
+    bool intersectTriangle(const Ray& ray, const Triangle& tri, float& t, Vec3& hit, Vec3& normal);
 };

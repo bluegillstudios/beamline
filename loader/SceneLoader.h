@@ -34,10 +34,22 @@ struct Camera {
     Vec3 lookat;
 };
 
+struct Cube {
+    Vec3 min, max;
+    Material material;
+};
+
+struct Triangle {
+    Vec3 v0, v1, v2;
+    Material material;
+};
+
 struct Scene {
     std::vector<Sphere> spheres;
     std::vector<Plane> planes;
     std::vector<Light> lights;
+    std::vector<Cube> cubes;
+    std::vector<Triangle> triangles;
     Vec3 ambient_light;    // New ambient light color
     Camera camera;
 

@@ -101,6 +101,29 @@ bool RayTracer::intersect(const Ray& ray, const Scene& scene, Vec3& hit, Vec3& n
         }
     }
 
+    for (const auto& c : scene.cubes) {
+        float t;
+        Vec3 hp, n;
+        if (intersectCube(ray, c, t, hp, n) && t < tMin) {
+            tMin = t;
+            hit = hp;
+            normal = n;
+            mat = c.material;
+            found = true;
+        }
+    }
+    for (const auto& tri : scene.triangles) {
+        float t;
+        Vec3 hp, n;
+        if (intersectTriangle(ray, tri, t, hp, n) && t < tMin) {
+            tMin = t;
+            hit = hp;
+            normal = n;
+            mat = tri.material;
+            found = true;
+        }
+    }
+
     return found;
 }
 
@@ -135,4 +158,74 @@ bool RayTracer::intersectPlane(const Ray& ray, const Plane& p, float& t, Vec3& h
     hit = ray.origin + ray.direction * t;
     normalOut = p.normal;
     return true;
+}
+
+// Ray-AABB (cube) intersection
+bool RayTracer::intersectCube(const Ray& ray, const Cube& cube, float& t, Vec3& hit, Vec3& normal) {
+    float tmin = (cube.min.x - ray.origin.x) / ray.direction.x;
+    float tmax = (cube.max.x - ray.origin.x) / ray.direction.x;
+    if (tmin > tmax) std::swap(tmin, tmax);
+
+    float tymin = (cube.min.y - ray.origin.y) / ray.direction.y;
+    float tymax = (cube.max.y - ray.origin.y) / ray.direction.y;
+    if (tymin > tymax) std::swap(tymin, tymax);
+
+    if ((tmin > tymax) || (tymin > tmax))
+        return false;
+
+    if (tymin > tmin) tmin = tymin;
+    if (tymax < tmax) tmax = tymax;
+
+    float tzmin = (cube.min.z - ray.origin.z) / ray.direction.z;
+    float tzmax = (cube.max.z - ray.origin.z) / ray.direction.z;
+    if (tzmin > tzmax) std::swap(tzmin, tzmax);
+
+    if ((tmin > tzmax) || (tzmin > tmax))
+        return false;
+
+    if (tzmin > tmin) tmin = tzmin;
+    if (tzmax < tmax) tmax = tzmax;
+
+    if (tmax < 0) return false;
+
+    t = tmin > 0 ? tmin : tmax;
+    if (t < 0) return false;
+
+    hit = ray.origin + ray.direction * t;
+
+    // Compute normal
+    const float eps = 1e-4f;
+    if (fabs(hit.x - cube.min.x) < eps) normal = Vec3(-1,0,0);
+    else if (fabs(hit.x - cube.max.x) < eps) normal = Vec3(1,0,0);
+    else if (fabs(hit.y - cube.min.y) < eps) normal = Vec3(0,-1,0);
+    else if (fabs(hit.y - cube.max.y) < eps) normal = Vec3(0,1,0);
+    else if (fabs(hit.z - cube.min.z) < eps) normal = Vec3(0,0,-1);
+    else if (fabs(hit.z - cube.max.z) < eps) normal = Vec3(0,0,1);
+    else normal = Vec3(0,0,0);
+
+    return true;
+}
+
+// Ray-triangle intersection (Möller–Trumbore)
+bool RayTracer::intersectTriangle(const Ray& ray, const Triangle& tri, float& t, Vec3& hit, Vec3& normal) {
+    const float EPSILON = 1e-6f;
+    Vec3 edge1 = tri.v1 - tri.v0;
+    Vec3 edge2 = tri.v2 - tri.v0;
+    Vec3 h = ray.direction.cross(edge2);
+    float a = edge1.dot(h);
+    if (fabs(a) < EPSILON) return false;
+    float f = 1.0f / a;
+    Vec3 s = ray.origin - tri.v0;
+    float u = f * s.dot(h);
+    if (u < 0.0f || u > 1.0f) return false;
+    Vec3 q = s.cross(edge1);
+    float v = f * ray.direction.dot(q);
+    if (v < 0.0f || u + v > 1.0f) return false;
+    t = f * edge2.dot(q);
+    if (t > EPSILON) {
+        hit = ray.origin + ray.direction * t;
+        normal = edge1.cross(edge2).normalized();
+        return true;
+    }
+    return false;
 }
