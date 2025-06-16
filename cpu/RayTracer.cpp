@@ -3,6 +3,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <cstdlib>
+#include <iostream>
 
 #ifndef M_PI
 #define M_PI 3.1415926535
@@ -35,7 +36,9 @@ void RayTracer::render(const Scene& scene) {
             Vec3 color = trace(ray, scene, maxDepth);
             framebuffer[y * width + x] = color;
         }
+        print_progress_bar(float(y + 1) / height);
     }
+    std::cout << std::endl;
 }
 
 Vec3 RayTracer::trace(const Ray& ray, const Scene& scene, int depth) {
@@ -228,4 +231,16 @@ bool RayTracer::intersectTriangle(const Ray& ray, const Triangle& tri, float& t,
         return true;
     }
     return false;
+}
+
+void print_progress_bar(float progress) {
+    const int barWidth = 50;
+    std::cout << "\r[";
+    int pos = static_cast<int>(barWidth * progress);
+    for (int i = 0; i < barWidth; ++i) {
+        if (i < pos) std::cout << "=";
+        else if (i == pos) std::cout << ">";
+        else std::cout << " ";
+    }
+    std::cout << "] " << int(progress * 100.0) << " %" << std::flush;
 }
