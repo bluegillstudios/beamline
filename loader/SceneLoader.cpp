@@ -4,6 +4,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <algorithm>
+#include <map>
 
 // Helpers
 
@@ -25,97 +26,88 @@ static std::string trim(const std::string& s) {
     return s.substr(start, end - start + 1);
 }
 
+inline Vec3 parse_vec3(const std::string& line) {
+    std::istringstream ss(line);
+    float x, y, z;
+    ss >> x >> y >> z;
+    return Vec3(x, y, z);
+}
+
 Scene load_scene_from_file(const std::string& filename) {
     Scene scene;
-
     std::ifstream file(filename);
     if (!file) {
-        std::cerr << "Error: cannot open scene file '" << filename << "'\n";
+        std::cerr << "Could not open scene file: " << filename << std::endl;
         return scene;
     }
 
-    std::string line;
-    std::string current_section;
-    std::unordered_map<std::string, std::string> properties;
+    std::string line, section;
+    std::map<std::string, std::string> current;
 
-    auto add_object = [&](const std::unordered_map<std::string, std::string>& props) {
-        if (props.empty()) return;
-
-        auto it_type = props.find("type");
-
-        if (current_section == "Camera") {
-            if (props.find("position") != props.end())
-                scene.camera.position = parseVec3(props.at("position"));
-            if (props.find("lookat") != props.end())
-                scene.camera.lookat = parseVec3(props.at("lookat"));
-            return;
-        }
-
-        if (it_type == props.end()) return;
-
-        const std::string& type = it_type->second;
-
-        try {
+    auto process_section = [&](const std::string& section_name, const std::map<std::string, std::string>& data) {
+        if (section_name == "AmbientLight") {
+            if (data.count("color")) {
+                scene.ambient_light = parse_vec3(data.at("color"));
+            }
+        } else if (data.count("type")) {
+            const std::string& type = data.at("type");
             if (type == "sphere") {
                 Sphere s;
-                s.center = parseVec3(props.at("center"));
-                s.radius = parseFloat(props.at("radius"));
-                s.material.diffuse_color = parseVec3(props.at("diffuse"));
-                s.material.reflectivity = parseFloat(props.at("reflectivity"));
+                s.center = parse_vec3(data.at("center"));
+                s.radius = std::stof(data.at("radius"));
+                s.material.diffuse_color = parse_vec3(data.at("diffuse"));
+                s.material.reflectivity = std::stof(data.at("reflectivity"));
+                if (data.count("emission"))
+                    s.material.emission = parse_vec3(data.at("emission"));
+                if (data.count("ior"))
+                    s.material.ior = std::stof(data.at("ior"));
                 scene.spheres.push_back(s);
-            }
-            else if (type == "plane") {
+            } else if (type == "plane") {
                 Plane p;
-                p.point = parseVec3(props.at("point"));
-                p.normal = parseVec3(props.at("normal"));
-                p.material.diffuse_color = parseVec3(props.at("diffuse"));
-                p.material.reflectivity = parseFloat(props.at("reflectivity"));
+                p.point = parse_vec3(data.at("point"));
+                p.normal = parse_vec3(data.at("normal"));
+                p.material.diffuse_color = parse_vec3(data.at("diffuse"));
+                p.material.reflectivity = std::stof(data.at("reflectivity"));
+                if (data.count("emission"))
+                    p.material.emission = parse_vec3(data.at("emission"));
+                if (data.count("ior"))
+                    p.material.ior = std::stof(data.at("ior"));
                 scene.planes.push_back(p);
-            }
-            else if (type == "point") {
+            } else if (type == "point") {
                 Light l;
-                l.position = parseVec3(props.at("position"));
-                l.color = parseVec3(props.at("color"));
+                l.position = parse_vec3(data.at("position"));
+                l.color = parse_vec3(data.at("color"));
                 scene.lights.push_back(l);
             }
-        } catch (const std::out_of_range& e) {
-            std::cerr << "Error parsing section [" << current_section << "]: missing required properties.\n";
         }
     };
 
     while (std::getline(file, line)) {
-        line = trim(line);
-
-        if (line.empty() || line[0] == '#')
-            continue;
-
-        if (line[0] == '[') {
-            // New section
-            add_object(properties);
-            properties.clear();
-
-            size_t end = line.find(']');
-            if (end == std::string::npos) {
-                std::cerr << "Warning: malformed section header: " << line << "\n";
-                current_section.clear();
-            } else {
-                current_section = line.substr(1, end - 1);
+        if (line.empty() || line[0] == '#') continue;
+        if (line[0] == '[' && line.back() == ']') {
+            if (!section.empty() && !current.empty()) {
+                process_section(section, current);
+                current.clear();
             }
+            section = line.substr(1, line.size() - 2);
         } else {
-            // key=value line
             size_t eq = line.find('=');
-            if (eq == std::string::npos) {
-                std::cerr << "Warning: malformed key=value line: " << line << "\n";
-                continue;
+            if (eq != std::string::npos) {
+                std::string key = line.substr(0, eq);
+                std::string value = line.substr(eq + 1);
+                key.erase(0, key.find_first_not_of(" "));
+                key.erase(key.find_last_not_of(" ") + 1);
+                value.erase(0, value.find_first_not_of(" "));
+                value.erase(value.find_last_not_of(" ") + 1);
+                current[key] = value;
             }
-
-            std::string key = trim(line.substr(0, eq));
-            std::string val = trim(line.substr(eq + 1));
-
-            properties[key] = val;
         }
     }
-    add_object(properties); // Add last
+
+    // Process last section after loop ends
+    if (!section.empty() && !current.empty()) {
+        process_section(section, current);
+    }
 
     return scene;
 }

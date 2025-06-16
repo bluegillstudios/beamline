@@ -21,11 +21,10 @@ void print_banner() {
 
 void print_usage() {
     std::cout << "Usage:\n";
-    std::cout << "  beamline <scene.beam> [width height]\n";
-    std::cout << "Options:\n";
-    std::cout << "  --info         Only print scene summary\n";
+    std::cout << "  beamline <scene.beam> [width height] [--out <file.ppm/png>] [--info]\n";
     std::cout << "\nExample:\n";
     std::cout << "  beamline scenes/test.beam 800 600\n";
+    std::cout << "  beamline scenes/test.beam --out renders/image.png\n";
     std::cout << "  beamline scenes/test.beam --info\n\n";
 }
 
@@ -70,14 +69,22 @@ int main(int argc, char* argv[]) {
 
     std::string scene_file = argv[1];
     bool info_only = false;
-
     int width = 800, height = 600;
+    std::string output_filename;
 
-    if (argc == 3 && std::string(argv[2]) == "--info") {
-        info_only = true;
-    } else if (argc >= 4) {
-        width = std::stoi(argv[2]);
-        height = std::stoi(argv[3]);
+    for (int i = 2; i < argc; ++i) {
+        std::string arg = argv[i];
+
+        if (arg == "--info") {
+            info_only = true;
+        } else if (arg == "--out" && i + 1 < argc) {
+            output_filename = argv[++i];
+        } else if (isdigit(arg[0])) {
+            if (i + 1 < argc && isdigit(argv[i + 1][0])) {
+                width = std::stoi(arg);
+                height = std::stoi(argv[++i]);
+            }
+        }
     }
 
     if (!std::filesystem::exists(scene_file)) {
@@ -110,12 +117,16 @@ int main(int argc, char* argv[]) {
     auto render_end = std::chrono::high_resolution_clock::now();
     double render_time = std::chrono::duration<double>(render_end - render_start).count();
 
-    std::string output_file = get_timestamped_filename("output");
+    std::string output_file = output_filename.empty()
+        ? get_timestamped_filename("output")
+        : output_filename;
+
     std::cout << "Saving to: " << output_file << "\n";
 
     auto save_start = std::chrono::high_resolution_clock::now();
     save_image(output_file, tracer.getFramebuffer(), width, height);
     auto save_end = std::chrono::high_resolution_clock::now();
+
     double save_time = std::chrono::duration<double>(save_end - save_start).count();
 
     std::cout << std::fixed << std::setprecision(3);

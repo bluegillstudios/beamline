@@ -44,9 +44,12 @@ Vec3 RayTracer::trace(const Ray& ray, const Scene& scene, int depth) {
     Vec3 hit, normal;
     Material mat;
     if (!intersect(ray, scene, hit, normal, mat))
-        return Vec3(0.1f, 0.1f, 0.1f); // Background
+        return Vec3(0.1f, 0.1f, 0.1f); // Background color
 
-    Vec3 color = mat.diffuse_color * 0.1f; // Ambient
+    Vec3 color = mat.diffuse_color * 0.1f; // Ambient term
+
+    // emission
+    color += mat.emission; 
 
     for (const auto& light : scene.lights) {
         Vec3 toLight = (light.position - hit).normalized();
