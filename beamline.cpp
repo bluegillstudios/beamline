@@ -11,7 +11,7 @@
 #include "cpu/RayTracer.h"
 #include "image/ImageSaver.h"
 
-const std::string BEAMLINE_VERSION = "1.0.1940";
+const std::string BEAMLINE_VERSION = "1.1.3500";
 
 void print_banner() {
     std::cout << "\n";
