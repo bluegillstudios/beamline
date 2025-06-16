@@ -29,11 +29,17 @@ struct Light {
     Vec3 color;
 };
 
+struct CameraFrame {
+    float time = 0.f;
+    Vec3 position;
+    Vec3 lookat;
+};
+
 struct Camera {
     Vec3 position;
     Vec3 lookat;
 
-    void apply_frame(const struct CameraFrame& frame) {
+    void apply_frame(const CameraFrame& frame) {
         position = frame.position;
         lookat = frame.lookat;
     }
@@ -47,12 +53,6 @@ struct Cube {
 struct Triangle {
     Vec3 v0, v1, v2;
     Material material;
-};
-
-struct CameraFrame {
-    float time = 0.f;
-    Vec3 position;
-    Vec3 lookat;
 };
 
 struct Scene {
