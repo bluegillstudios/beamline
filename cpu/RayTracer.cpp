@@ -8,6 +8,7 @@
 #ifndef M_PI
 #define M_PI 3.1415926535
 #endif
+void print_progress_bar(float progress);
 
 RayTracer::RayTracer(int w, int h, int depth)
     : width(w), height(h), maxDepth(depth), framebuffer(w * h) {}
