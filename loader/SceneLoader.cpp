@@ -33,6 +33,7 @@ inline Vec3 parse_vec3(const std::string& line) {
     return Vec3(x, y, z);
 }
 
+
 Scene load_scene_from_file(const std::string& filename) {
     Scene scene;
     std::ifstream file(filename);
@@ -49,7 +50,16 @@ Scene load_scene_from_file(const std::string& filename) {
             if (data.count("color")) {
                 scene.ambient_light = parse_vec3(data.at("color"));
             }
-        } else if (data.count("type")) {
+        }
+        // New: CameraFrame sections: check if section_name starts with "CameraFrame"
+        else if (section_name.find("CameraFrame") == 0) {
+            CameraFrame frame;
+            if (data.count("time")) frame.time = std::stof(data.at("time"));
+            if (data.count("position")) frame.position = parse_vec3(data.at("position"));
+            if (data.count("lookat")) frame.lookat = parse_vec3(data.at("lookat"));
+            scene.camera_frames.push_back(frame);
+        }
+        else if (data.count("type")) {
             const std::string& type = data.at("type");
             if (type == "sphere") {
                 Sphere s;
@@ -118,10 +128,10 @@ Scene load_scene_from_file(const std::string& filename) {
             if (eq != std::string::npos) {
                 std::string key = line.substr(0, eq);
                 std::string value = line.substr(eq + 1);
-                key.erase(0, key.find_first_not_of(" "));
-                key.erase(key.find_last_not_of(" ") + 1);
-                value.erase(0, value.find_first_not_of(" "));
-                value.erase(value.find_last_not_of(" ") + 1);
+                key.erase(0, key.find_first_not_of(" \t"));
+                key.erase(key.find_last_not_of(" \t") + 1);
+                value.erase(0, value.find_first_not_of(" \t"));
+                value.erase(value.find_last_not_of(" \t") + 1);
                 current[key] = value;
             }
         }

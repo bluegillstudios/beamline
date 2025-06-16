@@ -32,6 +32,11 @@ struct Light {
 struct Camera {
     Vec3 position;
     Vec3 lookat;
+
+    void apply_frame(const struct CameraFrame& frame) {
+        position = frame.position;
+        lookat = frame.lookat;
+    }
 };
 
 struct Cube {
@@ -44,6 +49,12 @@ struct Triangle {
     Material material;
 };
 
+struct CameraFrame {
+    float time = 0.f;
+    Vec3 position;
+    Vec3 lookat;
+};
+
 struct Scene {
     std::vector<Sphere> spheres;
     std::vector<Plane> planes;
@@ -54,6 +65,7 @@ struct Scene {
     Camera camera;
 
     Scene() : ambient_light(0.1f, 0.1f, 0.1f) {} // default ambient
+    std::vector<CameraFrame> camera_frames;
 };
 
 Scene load_scene_from_file(const std::string& filename);
