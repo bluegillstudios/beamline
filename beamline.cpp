@@ -72,6 +72,12 @@ int main(int argc, char* argv[]) {
     int width = 800, height = 600;
     std::string output_filename;
 
+    // New variables to hold camera overrides:
+    bool camera_pos_override = false;
+    bool camera_look_override = false;
+    Vec3 camera_pos_override_val;
+    Vec3 camera_look_override_val;
+
     for (int i = 2; i < argc; ++i) {
         std::string arg = argv[i];
 
@@ -83,6 +89,30 @@ int main(int argc, char* argv[]) {
             if (i + 1 < argc && isdigit(argv[i + 1][0])) {
                 width = std::stoi(arg);
                 height = std::stoi(argv[++i]);
+            }
+        } else if (arg == "--camera-pos" && i + 1 < argc) {
+            std::string val = argv[++i];
+            std::istringstream ss(val);
+            float x, y, z;
+            char comma1, comma2;
+            if (ss >> x >> comma1 >> y >> comma2 >> z && comma1 == ',' && comma2 == ',') {
+                camera_pos_override_val = Vec3{x, y, z};
+                camera_pos_override = true;
+            } else {
+                std::cerr << "[ERROR] Invalid format for --camera-pos. Use x,y,z\n";
+                return 1;
+            }
+        } else if (arg == "--camera-look" && i + 1 < argc) {
+            std::string val = argv[++i];
+            std::istringstream ss(val);
+            float x, y, z;
+            char comma1, comma2;
+            if (ss >> x >> comma1 >> y >> comma2 >> z && comma1 == ',' && comma2 == ',') {
+                camera_look_override_val = Vec3{x, y, z};
+                camera_look_override = true;
+            } else {
+                std::cerr << "[ERROR] Invalid format for --camera-look. Use x,y,z\n";
+                return 1;
             }
         }
     }
@@ -97,6 +127,19 @@ int main(int argc, char* argv[]) {
     auto load_end = std::chrono::high_resolution_clock::now();
 
     double load_time = std::chrono::duration<double>(load_end - load_start).count();
+
+    // Override camera if flags set
+    if (camera_pos_override) {
+        scene.camera.position = camera_pos_override_val;
+    }
+    if (camera_look_override) {
+        scene.camera.lookat = camera_look_override_val;
+    }
+    // Validate camera position and lookat
+    if (scene.camera.position == scene.camera.lookat) {
+        std::cerr << "[WARNING] Camera position and lookat are identical. Adjusting lookat.\n";
+        scene.camera.lookat = scene.camera.position + Vec3{0, 0, -1};
+    }
 
     std::cout << "Scene loaded: " << scene_file << " (" << load_time << " sec)\n";
 
